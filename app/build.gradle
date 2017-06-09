@@ -1,0 +1,93 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply from: "${rootDir}/tools/script-git-version.gradle"
+
+def versionMajor = 0
+def versionMinor = 1
+def versionPatch = 0
+def versionBuild = 0
+
+android {
+
+    compileSdkVersion 25
+    buildToolsVersion '25.0.3'
+
+    defaultConfig {
+        applicationId "ru.annin.cryptowallet"
+        minSdkVersion 21
+        targetSdkVersion 25
+
+        versionCode versionMajor * 10000 + versionMinor * 1000 + versionPatch * 100 + versionBuild
+        versionName "${versionMajor}.${versionMinor}" + (versionPatch == 0 ? "" : ".${versionPatch}")
+
+        resConfigs "ru"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        debug {
+            versionNameSuffix "-${gitRevision}"
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+        androidTest.java.srcDirs += 'src/androidTest/kotlin'
+    }
+
+    applicationVariants.all { variant ->
+        File outDir = file("${rootDir}/out/${variant.buildType.name}")
+        if (!outDir.exists()) {
+            outDir.mkdirs()
+        }
+        variant.assemble.doLast {
+            variant.outputs.each { output ->
+                File apkFile = output.outputFile
+                copy {
+                    from apkFile
+                    into outDir
+                    rename { fileName -> "CryptoWallet_v${variant.versionName}.${variant.versionCode}-${variant.flavorName}.apk" }
+                }
+            }
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+
+    // Android Support Library
+    compile 'com.android.support:design:25.3.1'
+    compile 'com.android.support.constraint:constraint-layout:1.0.2'
+
+    // Kotlin
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
+
+    // MVP
+    compile 'com.arello-mobile:moxy:1.5.1'
+    compile 'com.arello-mobile:moxy-app-compat:1.5.1'
+    kapt 'com.arello-mobile:moxy-compiler:1.5.1'
+
+    // Rx
+    compile 'io.reactivex:rxjava:1.2.10'
+    compile 'io.reactivex:rxandroid:1.2.1'
+    compile 'io.reactivex:rxkotlin:1.0.0'
+
+    // Test
+    testCompile 'junit:junit:4.12'
+    androidTestCompile 'com.android.support.test:runner:0.5'
+    androidTestCompile 'com.android.support.test:rules:0.5'
+    androidTestCompile 'com.android.support:support-annotations:25.3.1'
+    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
+}
+
+kapt {
+    generateStubs = true
+}
